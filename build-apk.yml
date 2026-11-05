@@ -1,0 +1,417 @@
+name: Construire l'APK Boite PDF
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer les fichiers du dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Installer Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Créer le projet Android
+        run: |
+          set -e
+          HTML=""
+          if [ -f compresseur-pdf.html ]; then HTML=compresseur-pdf.html; else HTML=$(ls *.html 2>/dev/null | head -n 1 || true); fi
+          if [ -z "$HTML" ]; then echo "::error::Aucun fichier .html trouvé à la racine du dépôt. Ajoutez compresseur-pdf.html."; exit 1; fi
+          ICON=""
+          if [ -f icone-512.png ]; then ICON=icone-512.png; else ICON=$(ls icone*.png 2>/dev/null | head -n 1 || true); fi
+          if [ -z "$ICON" ]; then echo "::error::Aucune icône trouvée. Ajoutez icone-512.png à la racine du dépôt."; exit 1; fi
+          echo "HTML utilisé : $HTML — icône : $ICON"
+
+          P=android
+          SRC=$P/app/src/main
+          mkdir -p $SRC/assets $SRC/java/mg/boiteoutils/pdf $SRC/res/drawable-nodpi $SRC/res/mipmap-anydpi-v26 $SRC/res/mipmap-xxxhdpi $SRC/res/values $SRC/res/xml
+          cp "$HTML" $SRC/assets/index.html
+          cp "$ICON" $SRC/res/drawable-nodpi/ic_fg.png
+          cp "$ICON" $SRC/res/mipmap-xxxhdpi/ic_launcher.png
+          echo "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" | base64 -d > $P/app/boite.jks
+
+          cat > $P/settings.gradle <<'EOT'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositories { google(); mavenCentral() } }
+          rootProject.name = "BoitePDF"
+          include ':app'
+          EOT
+
+          cat > $P/build.gradle <<'EOT'
+          plugins { id 'com.android.application' version '8.5.2' apply false }
+          EOT
+
+          cat > $P/gradle.properties <<'EOT'
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx3g
+          EOT
+
+          cat > $P/app/build.gradle <<'EOT'
+          plugins { id 'com.android.application' }
+          android {
+            namespace 'mg.boiteoutils.pdf'
+            compileSdk 34
+            defaultConfig {
+              applicationId 'mg.boiteoutils.pdf'
+              minSdk 24
+              targetSdk 34
+              versionCode Integer.parseInt(System.getenv('GITHUB_RUN_NUMBER') ?: '1')
+              versionName '1.' + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
+            }
+            signingConfigs {
+              fixe { storeFile file('boite.jks'); storePassword 'boitepdf2026'; keyAlias 'boite'; keyPassword 'boitepdf2026' }
+            }
+            buildTypes {
+              release { minifyEnabled false; signingConfig signingConfigs.fixe }
+            }
+            compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+            androidResources { noCompress 'html' }
+          }
+          dependencies {
+            implementation 'androidx.webkit:webkit:1.11.0'
+            implementation 'androidx.core:core:1.13.1'
+          }
+          EOT
+
+          cat > $SRC/AndroidManifest.xml <<'EOT'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
+            <application android:label="@string/app_name" android:icon="@mipmap/ic_launcher"
+                android:theme="@android:style/Theme.Material.Light.NoActionBar"
+                android:hardwareAccelerated="true" android:largeHeap="true">
+              <activity android:name=".MainActivity" android:exported="true"
+                  android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode"
+                  android:windowSoftInputMode="adjustResize">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN"/>
+                  <category android:name="android.intent.category.LAUNCHER"/>
+                </intent-filter>
+              </activity>
+              <provider android:name="androidx.core.content.FileProvider"
+                  android:authorities="mg.boiteoutils.pdf.fichiers"
+                  android:exported="false" android:grantUriPermissions="true">
+                <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/chemins"/>
+              </provider>
+            </application>
+          </manifest>
+          EOT
+
+          cat > $SRC/res/values/strings.xml <<'EOT'
+          <resources><string name="app_name">Boîte PDF</string></resources>
+          EOT
+
+          cat > $SRC/res/xml/chemins.xml <<'EOT'
+          <paths><cache-path name="partage" path="partage/"/></paths>
+          EOT
+
+          cat > $SRC/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOT'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+            <background android:drawable="@color/fond_icone"/>
+            <foreground><inset android:drawable="@drawable/ic_fg" android:inset="17%"/></foreground>
+          </adaptive-icon>
+          EOT
+
+          cat > $SRC/res/values/colors.xml <<'EOT'
+          <resources><color name="fond_icone">#F1F9F6</color></resources>
+          EOT
+
+          cat > $SRC/java/mg/boiteoutils/pdf/MainActivity.java <<'EOT'
+          package mg.boiteoutils.pdf;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.ClipData;
+          import android.content.ContentValues;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.os.Environment;
+          import android.provider.MediaStore;
+          import android.util.Base64;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebResourceResponse;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.widget.Toast;
+          import androidx.core.content.FileProvider;
+          import androidx.webkit.WebViewAssetLoader;
+          import java.io.File;
+          import java.io.FileInputStream;
+          import java.io.FileOutputStream;
+          import java.io.InputStream;
+          import java.io.OutputStream;
+          import java.util.ArrayList;
+          import java.util.HashMap;
+          import java.util.Map;
+          import java.util.UUID;
+
+          public class MainActivity extends Activity {
+            static final int REQ_FICHIER = 11, REQ_ENREG = 12, REQ_PERM = 13;
+            static final String ACCUEIL = "https://appassets.androidplatform.net/assets/index.html";
+            WebView web;
+            ValueCallback<Uri[]> rappelFichier;
+            final Map<String, File> fichiers = new HashMap<>();
+            final Map<String, String> types = new HashMap<>();
+            String enAttente;
+
+            @Override protected void onCreate(Bundle b) {
+              super.onCreate(b);
+              getWindow().setStatusBarColor(0xFF0F5C4D);
+              effacer(new File(getCacheDir(), "partage"));
+              web = new WebView(this);
+              setContentView(web);
+              WebSettings s = web.getSettings();
+              s.setJavaScriptEnabled(true);
+              s.setDomStorageEnabled(true);
+              s.setDatabaseEnabled(true);
+              s.setAllowFileAccess(false);
+              s.setAllowContentAccess(true);
+              s.setTextZoom(100);
+              final WebViewAssetLoader chargeur = new WebViewAssetLoader.Builder()
+                  .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this)).build();
+              web.setWebViewClient(new WebViewClient() {
+                @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
+                  return chargeur.shouldInterceptRequest(r.getUrl());
+                }
+                @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                  Uri u = r.getUrl();
+                  if ("appassets.androidplatform.net".equals(u.getHost())) return false;
+                  try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) { }
+                  return true;
+                }
+              });
+              web.setWebChromeClient(new WebChromeClient() {
+                @Override public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {
+                  if (rappelFichier != null) rappelFichier.onReceiveValue(null);
+                  rappelFichier = cb;
+                  Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                  i.addCategory(Intent.CATEGORY_OPENABLE);
+                  i.setType(typeAccepte(p.getAcceptTypes()));
+                  if (p.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                  try { startActivityForResult(Intent.createChooser(i, "Choisir un fichier"), REQ_FICHIER); }
+                  catch (Exception e) { rappelFichier = null; return false; }
+                  return true;
+                }
+              });
+              web.addJavascriptInterface(new Pont(), "AndroidBridge");
+              if (b == null || web.restoreState(b) == null) web.loadUrl(ACCUEIL);
+            }
+
+            @Override protected void onSaveInstanceState(Bundle o) { super.onSaveInstanceState(o); web.saveState(o); }
+
+            static String typeAccepte(String[] acc) {
+              boolean image = false, pdf = false, autre = false;
+              if (acc != null) for (String a0 : acc) for (String a : a0.split(",")) {
+                a = a.trim().toLowerCase();
+                if (a.isEmpty()) continue;
+                if (a.startsWith("image/")) image = true;
+                else if (a.equals("application/pdf") || a.equals(".pdf")) pdf = true;
+                else autre = true;
+              }
+              if (image && !pdf && !autre) return "image/*";
+              if (pdf && !image && !autre) return "application/pdf";
+              return "*/*";
+            }
+
+            @Override public void onBackPressed() {
+              if (web.canGoBack()) web.goBack(); else super.onBackPressed();
+            }
+
+            @Override protected void onActivityResult(int req, int res, Intent data) {
+              super.onActivityResult(req, res, data);
+              if (req == REQ_FICHIER) {
+                Uri[] r = null;
+                if (res == RESULT_OK && data != null) {
+                  ClipData c = data.getClipData();
+                  if (c != null) { r = new Uri[c.getItemCount()]; for (int k = 0; k < r.length; k++) r[k] = c.getItemAt(k).getUri(); }
+                  else if (data.getData() != null) r = new Uri[]{ data.getData() };
+                }
+                if (rappelFichier != null) rappelFichier.onReceiveValue(r);
+                rappelFichier = null;
+              } else if (req == REQ_ENREG) {
+                if (res == RESULT_OK && data != null && data.getData() != null && enAttente != null) {
+                  try (OutputStream o = getContentResolver().openOutputStream(data.getData())) {
+                    copier(fichiers.get(enAttente), o);
+                    message("Fichier enregistré ✔");
+                  } catch (Exception e) { message("Échec de l'enregistrement : " + e.getMessage()); }
+                }
+                enAttente = null;
+              }
+            }
+
+            @Override public void onRequestPermissionsResult(int req, String[] p, int[] g) {
+              if (req == REQ_PERM && enAttente != null) {
+                String id = enAttente; enAttente = null;
+                if (g.length > 0 && g[0] == PackageManager.PERMISSION_GRANTED) message(enregistrer(id));
+                else message("Autorisation refusée : fichier non enregistré.");
+              }
+            }
+
+            void message(final String m) { runOnUiThread(() -> Toast.makeText(this, m, Toast.LENGTH_LONG).show()); }
+
+            static void copier(File f, OutputStream o) throws Exception {
+              try (InputStream in = new FileInputStream(f)) {
+                byte[] buf = new byte[65536]; int n;
+                while ((n = in.read(buf)) > 0) o.write(buf, 0, n);
+              }
+            }
+
+            static void effacer(File f) {
+              if (f.isDirectory()) { File[] l = f.listFiles(); if (l != null) for (File x : l) effacer(x); }
+              f.delete();
+            }
+
+            String enregistrer(String id) {
+              File f = fichiers.get(id);
+              if (f == null) return "Fichier introuvable.";
+              String type = types.get(id);
+              try {
+                if (Build.VERSION.SDK_INT >= 29) {
+                  ContentValues cv = new ContentValues();
+                  cv.put(MediaStore.MediaColumns.DISPLAY_NAME, f.getName());
+                  cv.put(MediaStore.MediaColumns.MIME_TYPE, type);
+                  cv.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Boite PDF");
+                  Uri u = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+                  if (u == null) return "Impossible de créer le fichier.";
+                  try (OutputStream o = getContentResolver().openOutputStream(u)) { copier(f, o); }
+                } else {
+                  File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Boite PDF");
+                  dir.mkdirs();
+                  String nom = f.getName(), base = nom, ext = "";
+                  int pt = nom.lastIndexOf('.');
+                  if (pt > 0) { base = nom.substring(0, pt); ext = nom.substring(pt); }
+                  File dest = new File(dir, nom);
+                  for (int k = 1; dest.exists(); k++) dest = new File(dir, base + " (" + k + ")" + ext);
+                  try (OutputStream o = new FileOutputStream(dest)) { copier(f, o); }
+                }
+                return "Enregistré dans Téléchargements › Boite PDF ✔";
+              } catch (Exception e) { return "Échec : " + e.getMessage(); }
+            }
+
+            Uri uriDe(String id) {
+              return FileProvider.getUriForFile(this, "mg.boiteoutils.pdf.fichiers", fichiers.get(id));
+            }
+
+            class Pont {
+              @JavascriptInterface public String begin(String nom, String type) {
+                String id = UUID.randomUUID().toString();
+                String sur = nom == null ? "fichier" : nom.replaceAll("[\\\\/:*?\"<>|]", "_");
+                if (sur.trim().isEmpty()) sur = "fichier";
+                File dir = new File(getCacheDir(), "partage/" + id);
+                dir.mkdirs();
+                File f = new File(dir, sur);
+                f.delete();
+                fichiers.put(id, f);
+                types.put(id, (type == null || type.isEmpty()) ? "application/octet-stream" : type);
+                return id;
+              }
+              @JavascriptInterface public boolean chunk(String id, String b64) {
+                File f = fichiers.get(id);
+                if (f == null) return false;
+                try (FileOutputStream o = new FileOutputStream(f, true)) {
+                  o.write(Base64.decode(b64, Base64.DEFAULT)); return true;
+                } catch (Exception e) { return false; }
+              }
+              @JavascriptInterface public void save(final String id) {
+                runOnUiThread(() -> {
+                  if (Build.VERSION.SDK_INT < 29 && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    enAttente = id;
+                    requestPermissions(new String[]{ Manifest.permission.WRITE_EXTERNAL_STORAGE }, REQ_PERM);
+                  } else message(enregistrer(id));
+                });
+              }
+              @JavascriptInterface public void saveAs(final String id) {
+                runOnUiThread(() -> {
+                  File f = fichiers.get(id);
+                  if (f == null) return;
+                  enAttente = id;
+                  Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                  i.addCategory(Intent.CATEGORY_OPENABLE);
+                  i.setType(types.get(id));
+                  i.putExtra(Intent.EXTRA_TITLE, f.getName());
+                  try { startActivityForResult(i, REQ_ENREG); } catch (Exception e) { message("Impossible d'ouvrir le choix du dossier."); }
+                });
+              }
+              @JavascriptInterface public void share(final String ids) {
+                runOnUiThread(() -> {
+                  try {
+                    ArrayList<Uri> uris = new ArrayList<>();
+                    String type = null;
+                    for (String id : ids.split(",")) {
+                      if (!fichiers.containsKey(id)) continue;
+                      uris.add(uriDe(id));
+                      String t = types.get(id);
+                      type = (type == null || type.equals(t)) ? t : "*/*";
+                    }
+                    if (uris.isEmpty()) return;
+                    Intent i;
+                    if (uris.size() == 1) { i = new Intent(Intent.ACTION_SEND); i.putExtra(Intent.EXTRA_STREAM, uris.get(0)); }
+                    else { i = new Intent(Intent.ACTION_SEND_MULTIPLE); i.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris); }
+                    i.setType(type);
+                    ClipData c = ClipData.newRawUri("", uris.get(0));
+                    for (int k = 1; k < uris.size(); k++) c.addItem(new ClipData.Item(uris.get(k)));
+                    i.setClipData(c);
+                    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(i, "Partager via"));
+                  } catch (Exception e) { message("Partage impossible : " + e.getMessage()); }
+                });
+              }
+              @JavascriptInterface public void open(final String id) {
+                runOnUiThread(() -> {
+                  try {
+                    Intent i = new Intent(Intent.ACTION_VIEW);
+                    i.setDataAndType(uriDe(id), types.get(id));
+                    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(i, "Ouvrir avec"));
+                  } catch (Exception e) { message("Aucune application pour ouvrir ce fichier."); }
+                });
+              }
+            }
+          }
+          EOT
+
+      - name: Construire l'APK
+        working-directory: android
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Renommer l'APK
+        run: |
+          mkdir -p sortie
+          cp android/app/build/outputs/apk/release/*.apk "sortie/Boite-PDF-v1.${{ github.run_number }}.apk"
+          ls -la sortie
+
+      - name: Garder l'APK (onglet Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Boite-PDF-apk
+          path: sortie/*.apk
+
+      - name: Publier l'APK (onglet Releases, téléchargement direct)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.${{ github.run_number }}
+          name: Boîte PDF v1.${{ github.run_number }}
+          files: sortie/*.apk
